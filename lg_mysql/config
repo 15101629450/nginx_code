@@ -1,0 +1,7 @@
+
+CORE_INCS="$CORE_INCS $ngx_addon_dir"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/*.c"
+
+CORE_INCS="$CORE_INCS /usr/local/Cellar/mysql/5.7.17/include/mysql/"
+CORE_LIBS="$CORE_LIBS -L/usr/local/Cellar/mysql/5.7.17/lib/"
+CORE_LIBS="$CORE_LIBS -lmysqlclient"

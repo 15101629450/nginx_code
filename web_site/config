@@ -1,0 +1,8 @@
+
+ngx_addon_name=web_site_module
+HTTP_MODULES="$HTTP_MODULES web_site_module"
+
+CORE_INCS="$CORE_INCS src/lg_core"
+CORE_INCS="$CORE_INCS $ngx_addon_dir/include"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/*.c"
+

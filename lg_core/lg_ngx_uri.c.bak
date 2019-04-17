@@ -1,0 +1,113 @@
+
+#include "lg_string.h"
+#include "lg_ngx_session.h"
+#include "lg_ngx_network.h"
+#include "lg_ngx_uri.h"
+
+int lg_ngx_uri_parse_domain_e(ngx_http_request_t *r, lg_ngx_uri_t *uri)
+{
+    char *s = (char *)r->uri_start;
+    char *e = (char *)r->uri_end;
+
+    if ((s == e) || (*s == '/' && (s + 1) == e)) { 
+	uri->uri_type = LG_NGX_URI_TYPE_ROOT;
+	uri->domain_e = "/";
+	return 0;
+    }
+
+    if (strstr(s, ".html")) uri->uri_type = LG_NGX_URI_TYPE_HTML;
+    else uri->uri_type = LG_NGX_URI_TYPE_LIST;
+
+    uri->domain_e = (char *)s;
+    if (*uri->domain_e == '/') uri->domain_e = s + 1;
+    for (; s <= e; s++) {
+
+	if (!(*s == '/' || isalnum(*s))) {
+
+	    *s = 0;
+	    return 0;
+	}
+    }
+
+    uri->domain_e = NULL;
+    return -1;
+}
+
+char *lg_ngx_uri_parse_domain_s(ngx_http_request_t *r, lg_ngx_uri_t *uri)
+{
+    if (!uri->domain || !uri->domain_root)
+	return "null";
+
+    if (strcmp(uri->domain, uri->domain_root) == 0)
+	return "null";
+
+    char *__str = ngx_palloc(r->pool, strlen(uri->domain));
+    if (!__str) return "null";
+
+    char *str = __str;
+    char *domain = uri->domain;
+    while(*domain) {
+	*str++ = *domain++;
+	if (*domain== '.') {
+	    *str = 0;
+	    return __str;
+	}
+    }
+
+    return "null";
+}
+
+int lg_ngx_uri_parse_domain(ngx_http_request_t *r, lg_ngx_uri_t *uri)
+{
+    ngx_http_headers_in_t *headers_in = &r->headers_in;
+    if (!headers_in || !headers_in->server.data || !headers_in->server.len)
+	return -1;
+
+    uri->domain = (char *)headers_in->server.data;
+    uri->domain_root = lg_string_url_to_domain(uri->domain);
+    uri->domain_head = lg_ngx_uri_parse_domain_s(r, uri);
+    return 0;
+}
+
+void lg_ngx_uri_parse_mobile(ngx_http_request_t *r, lg_ngx_uri_t *uri)
+{
+
+    uri->mobile = 0;
+    uri->search_engine = 0;
+    char *user_agent = lg_ngx_network_get_user_agent(r);
+    if (user_agent) {
+	if (lg_string_strstr(user_agent, "ipad")
+		|| lg_string_strstr(user_agent, "iphone")
+		|| lg_string_strstr(user_agent, "android")
+		|| lg_string_strstr(user_agent, "windows ce")
+		|| lg_string_strstr(user_agent, "windows mobile")
+	   ) {
+	    uri->mobile = 1;
+	}
+
+	if (lg_string_strstr(user_agent, "spider")
+		|| lg_string_strstr(user_agent, "Baiduspider")		// 百度
+		|| lg_string_strstr(user_agent, "Googlebot")		// 谷歌
+		|| lg_string_strstr(user_agent, "360Spider")		// 360
+		|| lg_string_strstr(user_agent, "YisouSpider")		// 神马
+		|| lg_string_strstr(user_agent, "Sogou web spider")	// 搜狗
+		|| lg_string_strstr(user_agent, "haosou")		// 好搜
+	   ) {
+	    uri->search_engine = 1;
+	}
+    }
+}
+
+int lg_ngx_uri_parse(ngx_http_request_t *r, lg_ngx_uri_t *uri)
+{
+    if (lg_ngx_uri_parse_domain(r, uri))
+	return -1;
+
+    if (lg_ngx_uri_parse_domain_e(r, uri))
+	return -1;
+
+    lg_ngx_uri_parse_mobile(r, uri);
+    return 0;
+}
+
+
